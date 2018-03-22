@@ -1,25 +1,39 @@
 package main
 
 import (
-	"fmt" 
-	"os/exec"
-	"strings"
-	"regexp"
-	"log"
+	"fmt"
 	"os"
 	"time"
+	"strings"
+	"os/exec"
+	"regexp"
+	"log"
 )
 
-func main() {
-	if len(os.Args) < 3 {
+/**
+ * Sequence of things to happen at the openshift cli (oc):
+ * - oc login -u xyz -p xyz
+ * -
+ */
+var queryName string
+var appName string
+
+func verifyArguments(osArgs []string) bool {
+	if len(osArgs) == 0 {
 		fmt.Println("Run as: openshift_query queryName appName")
 		fmt.Println(" where: queryName = {waitForBuild}")
 		fmt.Println("        appName = name of openshift application")
+		return false
+	}
+	queryName = osArgs[0]
+	appName = osArgs[1]
+	return true
+}
+
+func main() {
+	if !verifyArguments(os.Args[1:]) {
 		return
 	}
-
-	queryName := os.Args[1]
-	appName := os.Args[2]
 
 	if "waitForBuild" == queryName {
 		for {
@@ -48,15 +62,19 @@ func getBuildStatus(appName string) string {
 }
 
 func getBuildDescription(appName string) []string {
-	cmdOut, _ := exec.Command("oc", "describe", "build", appName).Output()
+	return execOC("describe", "build", appName)
+}
+
+func execOC(action string, objectType string, objectName string) [] string {
+	cmdOut, _ := exec.Command("oc", action, objectType, objectName).Output()
 	outputString := string(cmdOut)
 	return strings.Split(outputString, "\n")
 }
 
 func getAlphabetOnlyString(src string) string {
 	reg, err := regexp.Compile("[^a-zA-Z0-9]+")
-    if err != nil {
-        log.Fatal(err)
-    }
-    return reg.ReplaceAllString(src, "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return reg.ReplaceAllString(src, "")
 }
