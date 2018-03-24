@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"time"
 	"strings"
 	"os/exec"
 	"regexp"
 	"log"
+	"flag"
+
 )
 
 /**
@@ -15,37 +14,36 @@ import (
  * - oc login -u xyz -p xyz
  * -
  */
+
 var queryName string
 var appName string
+var userName string
+var password string
 
-func verifyArguments(osArgs []string) bool {
-	if len(osArgs) == 0 {
-		fmt.Println("Run as: openshift_query queryName appName")
-		fmt.Println(" where: queryName = {waitForBuild}")
-		fmt.Println("        appName = name of openshift application")
-		return false
-	}
-	queryName = osArgs[0]
-	appName = osArgs[1]
-	return true
+type QueryArgs struct {
+	queryName string
+	appName string
+	userName string
+	password string
 }
 
-func main() {
-	if !verifyArguments(os.Args[1:]) {
-		return
-	}
 
-	if "waitForBuild" == queryName {
-		for {
-			status := getBuildStatus(appName)
-			fmt.Println(status)
-			if "Complete" == status {
-				fmt.Println("Build completes.")
-				break
-			}
-			time.Sleep(time.Duration(1) * time.Second)
-		}
-	}
+func constructArgs(args [] string) QueryArgs {
+	queryArgs := new(QueryArgs)
+	queryArgs.queryName = args[0]
+	queryCommand := flag.NewFlagSet(queryName, flag.ExitOnError)
+
+	appNamePtr := queryCommand.String("appname", "pet-clinic", "name of openshift application")
+	userNamePtr := queryCommand.String("username", "dev", "user name")
+	passwordPtr := queryCommand.String("password", "dev", "password")
+
+	queryCommand.Parse(args[1:])
+
+	queryArgs.appName = *appNamePtr
+	queryArgs.userName = *userNamePtr
+	queryArgs.password = *passwordPtr
+
+	return *queryArgs
 }
 
 func getBuildStatus(appName string) string {
@@ -78,3 +76,5 @@ func getAlphabetOnlyString(src string) string {
 	}
 	return reg.ReplaceAllString(src, "")
 }
+
+
